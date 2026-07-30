@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Sales & Performance Dashboard</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel/CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.25);
+            --secondary: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+            --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Top Header & File Upload Bar */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 20px 28px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .upload-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 10px 18px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--primary-glow);
+            border: none;
+        }
+
+        .file-upload-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        /* Controls Section: Slicers & Filters */
+        .controls-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 20px 24px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .select-input, .range-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        .select-input:focus {
+            border-color: var(--primary);
+        }
+
+        .range-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .range-slider-container input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .range-val {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 35px;
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .kpi-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+        }
+
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .kpi-subtext {
+            font-size: 12px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kpi-subtext.positive { color: var(--secondary); }
+        .kpi-subtext.negative { color: var(--accent-rose); }
+
+        /* Accent lines for KPIs */
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--primary);
+        }
+        .kpi-card:nth-child(2)::before { background: var(--secondary); }
+        .kpi-card:nth-child(3)::before { background: var(--accent-purple); }
+        .kpi-card:nth-child(4)::before { background: var(--accent-amber); }
+        .kpi-card:nth-child(5)::before { background: var(--accent-rose); }
+
+        /* Dashboard Main Visuals Layout */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex: 1;
+            min-height: 260px;
+            width: 100%;
+        }
+
+        /* Responsive Grid Spans */
+        .span-7 { grid-column: span 7; }
+        .span-5 { grid-column: span 5; }
+        .span-4 { grid-column: span 4; }
+        .span-8 { grid-column: span 8; }
+        .span-6 { grid-column: span 6; }
+        .span-12 { grid-column: span 12; }
+
+        @media (max-width: 1100px) {
+            .span-7, .span-5, .span-4, .span-8, .span-6 { grid-column: span 12; }
+        }
+
+        /* Table Section */
+        .table-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 300px;
+            margin-top: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-muted);
+            padding: 12px 16px;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge-danger { background: rgba(244, 63, 94, 0.15); color: #f87171; }
+
+        /* Notification Banner */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header class="header-bar">
+        <div class="header-title">
+            <h1><i data-lucide="layout-dashboard" style="color: var(--primary);"></i> Executive Sales & Operations Dashboard</h1>
+            <p>Interactive Performance Analytics & Target Tracking</p>
+        </div>
+        <div class="upload-controls">
+            <label for="fileInput" class="file-upload-btn">
+                <i data-lucide="upload"></i> Upload Dataset (.xlsx / .csv)
+            </label>
+            <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
+            <button class="btn-reset" onclick="resetFilters()">
+                <i data-lucide="rotate-ccw"></i> Reset Filters
+            </button>
+        </div>
+    </header>
+
+    <!-- Interactive Slicers Panel -->
+    <section class="controls-panel">
+        <!-- Slicer 1: Region -->
+        <div class="filter-group">
+            <label class="filter-label"><i data-lucide="map-pin"></i> Region Slicer</label>
+            <select id="regionSelect" class="select-input" onchange="applyFilters()">
+                <option value="ALL">All Regions</option>
+            </select>
+        </div>
+
+        <!-- Slicer 2: Product -->
+        <div class="filter-group">
+            <label class="filter-label"><i data-lucide="box"></i> Product Slicer</label>
+            <select id="productSelect" class="select-input" onchange="applyFilters()">
+                <option value="ALL">All Products</option>
+            </select>
+        </div>
+
+        <!-- Slicer 3: Performance Status -->
+        <div class="filter-group">
+            <label class="filter-label"><i data-lucide="target"></i> Target Status Slicer</label>
+            <select id="statusSelect" class="select-input" onchange="applyFilters()">
+                <option value="ALL">All Statuses</option>
+                <option value="Target Met">Target Met (Sales ≥ Target)</option>
+                <option value="Target Missed">Target Missed (Sales < Target)</option>
+            </select>
+        </div>
+
+        <!-- Timeline / Slider: Delivery Days -->
+        <div class="filter-group">
+            <label class="filter-label"><i data-lucide="truck"></i> Max Delivery Time Filter</label>
+            <div class="range-slider-container">
+                <input type="range" id="deliveryRange" min="1" max="15" value="15" oninput="updateDeliveryVal(this.value)" onchange="applyFilters()">
+                <span class="range-val" id="deliveryVal">15d</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5 Key Performance Indicators (KPIs) -->
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-title">Total Revenue</span>
+                <div class="kpi-icon"><i data-lucide="dollar-sign"></i></div>
+            </div>
+            <div class="kpi-value" id="kpiSales">$0</div>
+            <div class="kpi-subtext positive" id="kpiSalesSub"><i data-lucide="trending-up"></i> Standard dataset loaded</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-title">Total Profit & Margin</span>
+                <div class="kpi-icon"><i data-lucide="pie-chart"></i></div>
+            </div>
+            <div class="kpi-value" id="kpiProfit">$0</div>
+            <div class="kpi-subtext" id="kpiMarginSub">Margin: 0%</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-title">Target Attainment</span>
+                <div class="kpi-icon"><i data-lucide="award"></i></div>
+            </div>
+            <div class="kpi-value" id="kpiTargetAttainment">0%</div>
+            <div class="kpi-subtext" id="kpiTargetSub">Target: $0</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-title">Avg Customer Rating</span>
+                <div class="kpi-icon"><i data-lucide="star"></i></div>
+            </div>
+            <div class="kpi-value" id="kpiRating">0.0 / 5.0</div>
+            <div class="kpi-subtext" id="kpiRatingSub">Across active orders</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-title">Avg Delivery Time</span>
+                <div class="kpi-icon"><i data-lucide="clock"></i></div>
+            </div>
+            <div class="kpi-value" id="kpiDelivery">0.0 Days</div>
+            <div class="kpi-subtext" id="kpiDeliverySub">Logistics metric</div>
+        </div>
+    </section>
+
+    <!-- 5 Visuals Grid -->
+    <section class="charts-container">
+        <!-- Visual 1: Combo Chart (Sales vs Target by Product) -->
+        <div class="chart-card span-7">
+            <div class="chart-header">
+                <div class="chart-title"><i data-lucide="bar-chart-3" style="color:var(--primary);"></i> Visual 1: Sales vs Target Performance by Product</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chartSalesVsTarget"></canvas>
+            </div>
+        </div>
+
+        <!-- Visual 2: Doughnut Chart (Regional Sales Share) -->
+        <div class="chart-card span-5">
+            <div class="chart-header">
+                <div class="chart-title"><i data-lucide="pie-chart" style="color:var(--secondary);"></i> Visual 2: Regional Revenue Contribution</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chartRegionShare"></canvas>
+            </div>
+        </div>
+
+        <!-- Visual 3: Bar Chart (Profitability by Product) -->
+        <div class="chart-card span-4">
+            <div class="chart-header">
+                <div class="chart-title"><i data-lucide="trending-up" style="color:var(--accent-purple);"></i> Visual 3: Net Profit Breakdown by Product</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chartProductProfit"></canvas>
+            </div>
+        </div>
+
+        <!-- Visual 4: Scatter Plot (Rating vs Delivery Days Correlation) -->
+        <div class="chart-card span-4">
+            <div class="chart-header">
+                <div class="chart-title"><i data-lucide="activity" style="color:var(--accent-amber);"></i> Visual 4: Rating vs Delivery Speed</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chartRatingVsDelivery"></canvas>
+            </div>
+        </div>
+
+        <!-- Visual 5: Horizontal Bar (Target Variance Matrix) -->
+        <div class="chart-card span-4">
+            <div class="chart-header">
+                <div class="chart-title"><i data-lucide="sliders" style="color:var(--accent-rose);"></i> Visual 5: Regional Target Attainment (%)</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chartTargetVariance"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Table View -->
+    <section class="table-card">
+        <div class="chart-header">
+            <div class="chart-title"><i data-lucide="table" style="color:var(--text-muted);"></i> Detailed Order Records</div>
+            <span id="recordCount" style="font-size: 13px; color: var(--text-muted);">Showing 20 records</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Region</th>
+                        <th>Product</th>
+                        <th>Sales ($)</th>
+                        <th>Cost ($)</th>
+                        <th>Profit ($)</th>
+                        <th>Target ($)</th>
+                        <th>Rating</th>
+                        <th>Delivery Days</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div id="toast" class="toast">
+        <i data-lucide="check-circle"></i> <span id="toastMsg">Dataset updated successfully!</span>
+    </div>
+
+    <script>
+        // Initial Dataset parsed directly from user image
+        const rawDefaultData = [
+            { orderId: "ORD001", region: "North", product: "Laptop", sales: 5200, cost: 4100, target: 5000, rating: 4.5, deliveryDays: 3 },
+            { orderId: "ORD002", region: "South", product: "Monitor", sales: 2800, cost: 2100, target: 3200, rating: 3.8, deliveryDays: 7 },
+            { orderId: "ORD003", region: "East", product: "Keyboard", sales: 1500, cost: 900, target: 1400, rating: 4.7, deliveryDays: 2 },
+            { orderId: "ORD004", region: "West", product: "Laptop", sales: 6100, cost: 5300, target: 5500, rating: 3.2, deliveryDays: 9 },
+            { orderId: "ORD005", region: "North", product: "Mouse", sales: 1200, cost: 650, target: 1500, rating: 4.2, deliveryDays: 4 },
+            { orderId: "ORD006", region: "South", product: "Laptop", sales: 4800, cost: 3900, target: 5000, rating: 2.9, deliveryDays: 11 },
+            { orderId: "ORD007", region: "East", product: "Monitor", sales: 3500, cost: 2500, target: 3000, rating: 4.6, deliveryDays: 3 },
+            { orderId: "ORD008", region: "West", product: "Keyboard", sales: 1800, cost: 1100, target: 2000, rating: 3.5, deliveryDays: 8 },
+            { orderId: "ORD009", region: "North", product: "Monitor", sales: 4200, cost: 3100, target: 4000, rating: 4.8, deliveryDays: 2 },
+            { orderId: "ORD010", region: "South", product: "Mouse", sales: 900, cost: 600, target: 1200, rating: 2.7, deliveryDays: 12 },
+            { orderId: "ORD011", region: "East", product: "Laptop", sales: 7200, cost: 5800, target: 6500, rating: 4.4, deliveryDays: 5 },
+            { orderId: "ORD012", region: "West", product: "Monitor", sales: 2600, cost: 2200, target: 3000, rating: 3.0, deliveryDays: 10 },
+            { orderId: "ORD013", region: "North", product: "Keyboard", sales: 2100, cost: 1300, target: 1800, rating: 4.9, deliveryDays: 2 },
+            { orderId: "ORD014", region: "South", product: "Monitor", sales: 3900, cost: 2800, target: 3500, rating: 4.1, deliveryDays: 4 },
+            { orderId: "ORD015", region: "East", product: "Mouse", sales: 1100, cost: 700, target: 1300, rating: 3.6, deliveryDays: 6 },
+            { orderId: "ORD016", region: "West", product: "Laptop", sales: 5600, cost: 4700, target: 6000, rating: 3.3, deliveryDays: 8 },
+            { orderId: "ORD017", region: "North", product: "Mouse", sales: 1700, cost: 800, target: 1500, rating: 4.7, deliveryDays: 3 },
+            { orderId: "ORD018", region: "South", product: "Keyboard", sales: 1400, cost: 1050, target: 1800, rating: 2.8, deliveryDays: 13 },
+            { orderId: "ORD019", region: "East", product: "Monitor", sales: 4600, cost: 3200, target: 4000, rating: 4.5, deliveryDays: 3 },
+            { orderId: "ORD020", region: "West", product: "Mouse", sales: 1300, cost: 850, target: 1500, rating: 3.9, deliveryDays: 5 }
+        ];
+
+        let currentDataset = [...rawDefaultData];
+        let charts = {};
+
+        // Color Palette definitions
+        const chartColors = {
+            primary: '#3b82f6',
+            secondary: '#10b981',
+            purple: '#8b5cf6',
+            amber: '#f59e0b',
+            rose: '#f43f5e',
+            blueGrid: 'rgba(255, 255, 255, 0.05)',
+            textMuted: '#94a3b8'
+        };
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            populateSlicers();
+            initCharts();
+            applyFilters();
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function updateDeliveryVal(val) {
+            document.getElementById('deliveryVal').innerText = val + 'd';
+        }
+
+        // File Upload Handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.SheetNames[0];
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+
+                    if (json.length === 0) {
+                        alert("Uploaded file is empty.");
+                        return;
+                    }
+
+                    // Map fields dynamically
+                    currentDataset = json.map((row, idx) => ({
+                        orderId: row['Order ID'] || row['OrderID'] || `ORD-${idx+1}`,
+                        region: row['Region'] || 'Unknown',
+                        product: row['Product'] || 'Other',
+                        sales: Number(row['Sales'] || 0),
+                        cost: Number(row['Cost'] || 0),
+                        target: Number(row['Target'] || 0),
+                        rating: Number(row['Rating'] || 0),
+                        deliveryDays: Number(row['Delivery Days'] || row['DeliveryDays'] || 0)
+                    }));
+
+                    populateSlicers();
+                    applyFilters();
+                    showToast(`Successfully loaded ${currentDataset.length} rows from file!`);
+                } catch (err) {
+                    alert("Error parsing file. Ensure structure has Order ID, Region, Product, Sales, Cost, Target, Rating, Delivery Days headers.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function populateSlicers() {
+            const regions = ['ALL', ...new Set(currentDataset.map(d => d.region))];
+            const products = ['ALL', ...new Set(currentDataset.map(d => d.product))];
+
+            const regionSel = document.getElementById('regionSelect');
+            const productSel = document.getElementById('productSelect');
+
+            regionSel.innerHTML = regions.map(r => `<option value="${r}">${r === 'ALL' ? 'All Regions' : r}</option>`).join('');
+            productSel.innerHTML = products.map(p => `<option value="${p}">${p === 'ALL' ? 'All Products' : p}</option>`).join('');
+
+            const maxDelivery = Math.max(...currentDataset.map(d => d.deliveryDays), 15);
+            const slider = document.getElementById('deliveryRange');
+            slider.max = maxDelivery;
+            slider.value = maxDelivery;
+            updateDeliveryVal(maxDelivery);
+        }
+
+        function resetFilters() {
+            document.getElementById('regionSelect').value = 'ALL';
+            document.getElementById('productSelect').value = 'ALL';
+            document.getElementById('statusSelect').value = 'ALL';
+            const slider = document.getElementById('deliveryRange');
+            slider.value = slider.max;
+            updateDeliveryVal(slider.value);
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const regionVal = document.getElementById('regionSelect').value;
+            const productVal = document.getElementById('productSelect').value;
+            const statusVal = document.getElementById('statusSelect').value;
+            const maxDelivery = Number(document.getElementById('deliveryRange').value);
+
+            const filtered = currentDataset.filter(d => {
+                const matchRegion = (regionVal === 'ALL' || d.region === regionVal);
+                const matchProduct = (productVal === 'ALL' || d.product === productVal);
+                const matchDelivery = (d.deliveryDays <= maxDelivery);
+                let matchStatus = true;
+                if (statusVal === 'Target Met') matchStatus = d.sales >= d.target;
+                if (statusVal === 'Target Missed') matchStatus = d.sales < d.target;
+
+                return matchRegion && matchProduct && matchDelivery && matchStatus;
+            });
+
+            updateKPIs(filtered);
+            updateCharts(filtered);
+            updateTable(filtered);
+        }
+
+        function updateKPIs(data) {
+            const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
+            const totalCost = data.reduce((sum, d) => sum + d.cost, 0);
+            const totalTarget = data.reduce((sum, d) => sum + d.target, 0);
+            const totalProfit = totalSales - totalCost;
+            const margin = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0;
+            const attainment = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+            const avgRating = data.length > 0 ? (data.reduce((sum, d) => sum + d.rating, 0) / data.length).toFixed(1) : 0;
+            const avgDelivery = data.length > 0 ? (data.reduce((sum, d) => sum + d.deliveryDays, 0) / data.length).toFixed(1) : 0;
+
+            document.getElementById('kpiSales').innerText = `$${totalSales.toLocaleString()}`;
+            document.getElementById('kpiProfit').innerText = `$${totalProfit.toLocaleString()}`;
+            document.getElementById('kpiMarginSub').innerText = `Profit Margin: ${margin}%`;
+
+            document.getElementById('kpiTargetAttainment').innerText = `${attainment}%`;
+            document.getElementById('kpiTargetSub').innerText = `Target: $${totalTarget.toLocaleString()}`;
+
+            document.getElementById('kpiRating').innerText = `${avgRating} / 5.0`;
+            document.getElementById('kpiDelivery').innerText = `${avgDelivery} Days`;
+        }
+
+        function initCharts() {
+            Chart.defaults.color = chartColors.textMuted;
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            // Chart 1: Sales vs Target
+            charts.salesVsTarget = new Chart(document.getElementById('chartSalesVsTarget'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { grid: { color: chartColors.blueGrid } },
+                        y: { grid: { color: chartColors.blueGrid } }
+                    }
+                }
+            });
+
+            // Chart 2: Regional Share
+            charts.regionShare = new Chart(document.getElementById('chartRegionShare'), {
+                type: 'doughnut',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } },
+                    cutout: '65%'
+                }
+            });
+
+            // Chart 3: Product Profitability
+            charts.productProfit = new Chart(document.getElementById('chartProductProfit'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: chartColors.blueGrid } },
+                        y: { grid: { color: chartColors.blueGrid } }
+                    }
+                }
+            });
+
+            // Chart 4: Rating vs Delivery Scatter
+            charts.ratingVsDelivery = new Chart(document.getElementById('chartRatingVsDelivery'), {
+                type: 'scatter',
+                data: { datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `Order ${ctx.raw.orderId}: ${ctx.raw.x} Days, ${ctx.raw.y} Stars`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Delivery Days' }, grid: { color: chartColors.blueGrid } },
+                        y: { title: { display: true, text: 'Rating' }, min: 1, max: 5, grid: { color: chartColors.blueGrid } }
+                    }
+                }
+            });
+
+            // Chart 5: Target Variance Matrix
+            charts.targetVariance = new Chart(document.getElementById('chartTargetVariance'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: chartColors.blueGrid }, ticks: { callback: v => v + '%' } },
+                        y: { grid: { color: chartColors.blueGrid } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(data) {
+            // Aggregation 1: Products (Sales & Target)
+            const products = [...new Set(data.map(d => d.product))];
+            const prodSales = products.map(p => data.filter(d => d.product === p).reduce((s, c) => s + c.sales, 0));
+            const prodTargets = products.map(p => data.filter(d => d.product === p).reduce((s, c) => s + c.target, 0));
+
+            charts.salesVsTarget.data = {
+                labels: products,
+                datasets: [
+                    { type: 'bar', label: 'Actual Sales', data: prodSales, backgroundColor: '#3b82f6', borderRadius: 6 },
+                    { type: 'line', label: 'Target', data: prodTargets, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 5, fill: false }
+                ]
+            };
+            charts.salesVsTarget.update();
+
+            // Aggregation 2: Regions Share
+            const regions = [...new Set(data.map(d => d.region))];
+            const regSales = regions.map(r => data.filter(d => d.region === r).reduce((s, c) => s + c.sales, 0));
+
+            charts.regionShare.data = {
+                labels: regions,
+                datasets: [{
+                    data: regSales,
+                    backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4']
+                }]
+            };
+            charts.regionShare.update();
+
+            // Aggregation 3: Product Profitability
+            const prodProfit = products.map(p => data.filter(d => d.product === p).reduce((s, c) => s + (c.sales - c.cost), 0));
+            charts.productProfit.data = {
+                labels: products,
+                datasets: [{
+                    label: 'Net Profit ($)',
+                    data: prodProfit,
+                    backgroundColor: '#10b981',
+                    borderRadius: 6
+                }]
+            };
+            charts.productProfit.update();
+
+            // Aggregation 4: Scatter Plot
+            const scatterPoints = data.map(d => ({ x: d.deliveryDays, y: d.rating, orderId: d.orderId }));
+            charts.ratingVsDelivery.data = {
+                datasets: [{
+                    label: 'Orders',
+                    data: scatterPoints,
+                    backgroundColor: '#8b5cf6',
+                    pointRadius: 6
+                }]
+            };
+            charts.ratingVsDelivery.update();
+
+            // Aggregation 5: Regional Target Attainment (%)
+            const regAttainment = regions.map(r => {
+                const sub = data.filter(d => d.region === r);
+                const s = sub.reduce((a, b) => a + b.sales, 0);
+                const t = sub.reduce((a, b) => a + b.target, 0);
+                return t > 0 ? Number(((s / t) * 100).toFixed(1)) : 0;
+            });
+
+            charts.targetVariance.data = {
+                labels: regions,
+                datasets: [{
+                    label: 'Target Attainment %',
+                    data: regAttainment,
+                    backgroundColor: regAttainment.map(val => val >= 100 ? '#10b981' : '#f43f5e'),
+                    borderRadius: 6
+                }]
+            };
+            charts.targetVariance.update();
+        }
+
+        function updateTable(data) {
+            const tbody = document.getElementById('dataTableBody');
+            document.getElementById('recordCount').innerText = `Showing ${data.length} records`;
+
+            tbody.innerHTML = data.map(d => {
+                const profit = d.sales - d.cost;
+                const metTarget = d.sales >= d.target;
+                const statusBadge = metTarget ? 
+                    '<span class="badge badge-success">Met Target</span>' : 
+                    '<span class="badge badge-danger">Missed</span>';
+
+                return `
+                    <tr>
+                        <td style="font-weight:700;">${d.orderId}</td>
+                        <td>${d.region}</td>
+                        <td>${d.product}</td>
+                        <td>$${d.sales.toLocaleString()}</td>
+                        <td>$${d.cost.toLocaleString()}</td>
+                        <td style="color:${profit >= 0 ? '#34d399' : '#f87171'}; font-weight:600;">$${profit.toLocaleString()}</td>
+                        <td>$${d.target.toLocaleString()}</td>
+                        <td><i data-lucide="star" style="width:12px; height:12px; color:#f59e0b; display:inline;"></i> ${d.rating}</td>
+                        <td>${d.deliveryDays} Days</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
